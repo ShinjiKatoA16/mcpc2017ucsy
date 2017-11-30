@@ -3,7 +3,7 @@
 
 '''
     2017 MCPC at UCSY
-    Problem-?: 
+    Problem-D: Ceiling Function
 '''
 import sys
 
