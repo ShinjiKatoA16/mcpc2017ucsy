@@ -42,7 +42,7 @@ def solve(tc):
 
     x = (-b + ((b**2 - 4*a*c)**0.5)) / (2*a)  # only positive value
 
-    print(x)
+    print(round(x,2))
     return
 
 
