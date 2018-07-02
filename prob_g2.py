@@ -19,7 +19,7 @@ def parse_tc(tc):
         Return: None
     '''
 
-    tc.l, tc.w = tuple(map(int,sys.stdin.readline().split()))
+    tc.l, tc.w = map(float,sys.stdin.readline().split())
     tc.a = float(sys.stdin.readline().strip())
 
     return
