@@ -12,6 +12,30 @@ class TestCase():
     pass
 
 
+class Plates():
+    # Groupt of same radius plates in merged stack
+    # id_list: list of stack ID
+    def __init__(self, radius, id_list):
+        self.radius = radius
+        self.id_list = id_list
+        self.top = None
+        self.bottom = None
+
+    def match_prev(self, prev_bottom):
+        self.top = list()
+        for stack_id in self.id_list:
+            if stack_id in prev_bottom:
+                self.top.append(stack_id)
+        self.bottom = self.id_list.copy()
+        if len(self.top) == 1 and len(self.bottom) != 1:
+            self.bottom.remove(self.top[0])
+
+        return
+
+    def __repr__(self):
+        return ('Plates {}: {}, top: {} bottom: {}'.format(self.radius, self.id_list, self.top, self.bottom))
+
+
 def parse_tc(tc):
     '''
         Input: Test Case
@@ -23,7 +47,8 @@ def parse_tc(tc):
     tc.stacks = list()
 
     for i in range(tc.n):
-        tc.stacks.append(sys.stdin.readline().split()) # 2D list
+        stack = sys.stdin.readline().split()[1:]  # 2d List, 1st=len
+        tc.stacks.append(stack)
 
     return
 
@@ -35,118 +60,97 @@ def reform_stack(org):
     '''
 
     stacks = list()
+    stack_id = 0
 
     for stack in org:
-        prev_val = None
+        prev_radius = None
         new_stack = list()
 
-        for i in range(1, len(stack)):
-            if stack[i] != prev_val:
-                new_stack.append(stack[i])
-                prev_val = stack[i]
+        for radius in stack:
+            if radius != prev_radius:
+                new_stack.append((radius, stack_id))
+            prev_radius = radius
 
         stacks.append(new_stack)
+        stack_id += 1
 
     return stacks
 
-def dequeue(listx):
-    '''
-    x: List
-    update: x -> x[1:], remove 1st element
-    return 1st element and updated list
-    '''
-
-    if listx == []: return None, None
-
-    val = listx[0]
-    listx = listx[1:]
-    return val, listx
-
-def merge2(list1, list2):
-    '''
-        list1, list2: List of digits
-        Return: merged list of 2
-    '''
-    new_list = list()
-    val1, list1 = dequeue(list1)
-    val2, list2 = dequeue(list2)
-
-    while not (val1 == None and val2 == None):
-        if val1 == None:
-            new_list.append(val2)
-            val2, list2 = dequeue(list2)
-        elif val2 == None or val1 < val2:
-            new_list.append(val1)
-            val1, list1 = dequeue(list1)
-        else:
-            new_list.append(val2)
-            val2, list2 = dequeue(list2)
-
-    return new_list
 
 def merge(stacks):
     '''
-        stacks: 2D List
+        stacks: 2D List of tuple(radius, id)
         Return: 1D sorted List
     '''
 
     merged_stack = list()
 
     for stack in stacks:
-        merged_stack = merge2(merged_stack, stack)
+        merged_stack.extend(stack)
 
-#    print('Merged stack', merged_stack)
+    merged_stack.sort()
+
     return merged_stack
 
-def bound_exist(p, n, stacks):
+
+def stack2plates(merged_stack):
     '''
-        p: digit-1
-        n: digit-2
-        Return: True if p-n combination exists in stacks
-                False otherwise
+    merged_stack: List of Tuple(radius, id)
+    return: List of Plates
     '''
-    for stack in stacks:
-        if p in stack and n in stack:
-            if stack.index(p) + 1 == stack.index(n):
-                return True
 
-    return False
+    plates_list = list()
+    id_list = list()
+    prev_size = None
+
+    for plate in merged_stack:
+        radius, plate_id = plate
+        if radius != prev_size:
+            if id_list:
+                plates_list.append(Plates(prev_size, id_list))
+            id_list = [plate_id]
+        else:
+            id_list.append(plate_id)
+
+        prev_size = radius
+
+    if id_list:
+        plates_list.append(Plates(radius, id_list))
+
+    return plates_list
 
 
-def check_bound(merged_stack, stacks):
-    '''
-        merged_stack: combined list
-        stacks: Input 2D list
-        Return: Number of 2 digit combination in stacks
-    '''
-    num_found = 0
+def max_reuse(plates_list):
 
-    prev_val = merged_stack[0]
-    for i in range(1, len(merged_stack)):
-        next_val = merged_stack[i]
-        if bound_exist(prev_val, next_val, stacks):
-            num_found += 1
-            
-    return num_found
+    reuse = 0
+    prev_bottom = list()
 
+    for plates in plates_list:
+        plates.match_prev(prev_bottom)
+        if plates.top: reuse += 1
+        prev_bottom = plates.bottom
+        #print(plates, file=sys.stderr)
+
+    return reuse
 
 def solve(tc):
     '''
         Input: Test Case
-        Return: None
+        Return: Numper of movement
     '''
 
     parse_tc(tc)
     stacks = reform_stack(tc.stacks)
-#    print(stacks)
+    #print(stacks)
     num_merge = len(stacks) - 1  ## Join Stacks
     for stack in stacks:
         num_merge += (len(stack) - 1) * 2  ## Split and Join
 
     merged_stack = merge(stacks)
+    plates_list = stack2plates(merged_stack)  # list of Plates
 
-    print(num_merge - check_bound(merged_stack, stacks) * 2)
-    return
+    #return (num_merge - check_bound(merged_stack, stack_bound) * 2)
+    return (num_merge - max_reuse(plates_list) * 2)
 
 
 ##
@@ -158,5 +162,4 @@ if __name__ == '__main__':
     tc.t = int(sys.stdin.readline())
     
     for i in range(tc.t):
-        print('Case ', i+1, ':', sep='', end='')
-        solve(tc)
+        print('Case {}:{}'.format(i+1, solve(tc)))
